@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bn</title>
+  <style>
+    :root{--bg:#07090c;--surface:#0d1117;--surface2:#121820;--line:#1c242d;--text:#e6e9ed;--muted:#8b95a1;--mint:#2dd4a7;--mint-ink:#04110d;--orange:#f97316}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+    h1,h2,.mono{font-family:"JetBrains Mono","IBM Plex Mono",ui-monospace,Consolas,monospace}
+    .wrap{max-width:760px;margin:0 auto;padding:40px 20px}
+    .brand{font-weight:800;color:var(--mint);font-size:2rem;letter-spacing:1px;margin-bottom:24px}
+    .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:14px}
+    .label{color:var(--orange);font-size:.75rem;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px}
+    p,li{color:var(--muted)}
+    li b,p b{color:var(--text);font-weight:600}
+    ol{padding-left:20px}
+    li{margin:8px 0}
+    .btn{display:block;text-align:center;background:var(--mint);color:var(--mint-ink);font-weight:700;padding:14px 20px;border-radius:8px;text-decoration:none;font-size:1.05rem}
+    .note{font-size:.9rem;border-left:3px solid var(--orange);padding-left:12px;margin-top:12px}
+    .tok{font-family:ui-monospace,Consolas,monospace;color:var(--mint)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">bn</div>
+
+    <div class="card">
+      <div class="label">1. Download</div>
+      <a class="btn" href="/downloads/bn.apk">Download bn.apk</a>
+      <p class="note">Your browser may warn that this file type can harm your device. Tap <b>Download anyway</b> (or <b>Keep</b>). bn is not on the Google Play Store, so every phone shows this warning.</p>
+    </div>
+
+    <div class="card">
+      <div class="label">2. Install</div>
+      <ol>
+        <li>Open the downloaded <b>bn.apk</b> (from your browser's downloads or the Files app).</li>
+        <li>If Android says your phone is <b>not allowed to install unknown apps</b>, tap <b>Settings</b>, turn on <b>Allow from this source</b>, then go back and tap <b>Install</b>.</li>
+        <li>If <b>Google Play Protect</b> says the app is blocked or unsafe, tap <b>More details</b>, then <b>Install anyway</b>. This appears because the app is not from the Play Store and Google has not scanned it.</li>
+        <li>No "Install anyway" button? Open the Play Store, tap your profile picture, then <b>Play Protect</b>, then the settings gear, and turn off <b>Scan apps with Play Protect</b>. Install bn, then turn it back on.</li>
+      </ol>
+      <p class="note">Updating? Install the new file straight over the old one. <b>Do not uninstall bn first</b>, or you lose your credits.</p>
+    </div>
+
+    <div class="card">
+      <div class="label">3. Set up the phone</div>
+      <ol>
+        <li>Open bn. A card called <b>Finish setup</b> on the first screen lists what is left. Work down it, tapping the button on each line.</li>
+        <li><b>Allow permissions:</b> allow SMS, Phone and Notifications. If SMS is greyed out or blocked, go to <b>Settings &gt; Apps &gt; bn</b>, tap the menu at the top right, choose <b>Allow restricted settings</b>, then allow SMS again.</li>
+        <li><b>Turn on the dialing helper:</b> tap <b>Turn on</b>, find <b>bn USSD helper</b> in the list and switch it on. Bundle codes must be dialed one step at a time, and this helper does the typing. It does nothing except while bn is dialing a sale. If it is greyed out, use <b>Allow restricted settings</b> as above.</li>
+        <li><b>Choose your M-Pesa line:</b> if your phone has two SIMs, tap <b>Choose</b> and pick the SIM your customers pay into.</li>
+        <li>Set battery use for bn to <b>No restrictions</b> (Settings &gt; Apps &gt; bn &gt; Battery). Keep the phone plugged in, with the SIM inside and <b>no screen lock</b>, so the dialing menus can appear.</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <div class="label">4. Add credits</div>
+      <ol>
+        <li>In bn, under <b>ADD CREDITS</b>, tap <b>COPY</b> next to your Device ID.</li>
+        <li>Send the Device ID to us with your payment.</li>
+        <li>We reply with a token that starts with <span class="tok">BN$V$</span>. Copy the whole message.</li>
+        <li>Open bn, tap <b>PASTE</b>, then <b>ADD CREDITS</b>.</li>
+      </ol>
+      <p class="note">1 credit = Ksh 1 of sales. A Ksh 19 sale uses 19 credits. When credits run out, sales are not dialed until you add more.</p>
+    </div>
+  </div>
+</body>
+</html>

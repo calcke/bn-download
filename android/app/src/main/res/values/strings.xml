@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ussd_helper_description">Lets bn type the reply steps of a phone menu code (USSD) for you, one step at a time. It only acts while bn is dialing a sale and ignores everything else on the phone.</string>
+</resources>

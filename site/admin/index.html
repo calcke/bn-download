@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>bn admin</title>
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+<div class="lock" id="lock">
+  <div class="card">
+    <h1 style="margin-bottom:4px">bn admin</h1>
+    <div class="tag" style="margin-bottom:14px">PRIVATE &nbsp;&middot;&nbsp; PASSWORD REQUIRED</div>
+    <input id="pw" type="password" placeholder="Admin password" autocomplete="current-password">
+    <input id="pw2" type="password" placeholder="Type the password again" autocomplete="new-password" style="margin-top:8px" hidden>
+    <div class="row" style="margin-top:10px">
+      <button class="primary grow" id="go">Unlock</button>
+    </div>
+    <div id="lockmsg" class="muted" style="margin-top:10px"></div>
+    <div id="modeNote" class="muted" style="margin-top:10px;font-size:.85rem"></div>
+  </div>
+</div>
+
+<div class="wrap" id="app" hidden>
+  <header>
+    <h1>bn admin</h1>
+    <span class="tag">APP KEY // CREDIT TOKENS</span>
+    <span class="sync" id="sync"></span>
+    <button class="quiet" id="lockbtn">Lock</button>
+  </header>
+  <div class="muted">Your app key and token history are locked with your password before they are saved. The page locks itself after 15 minutes of no use.</div>
+
+  <nav>
+    <button data-tab="key" class="on">1. App key</button>
+    <button data-tab="credits">2. Credit tokens</button>
+    <button data-tab="backup">Backup</button>
+  </nav>
+
+  <section id="tab-key"></section>
+  <section id="tab-credits" hidden></section>
+  <section id="tab-backup" hidden></section>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
