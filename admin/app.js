@@ -29,7 +29,32 @@ function openVault(v) {
   });
 }
 
+// When the page is hosted on GitHub Pages there is no server function, so the locked data is kept in THIS browser.
+var LOCAL = false;
+var LOCAL_KEY = "bn_admin_vault_v1";
+function localLoad() { try { var s = localStorage.getItem(LOCAL_KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
+function savedText() { return LOCAL ? "Saved in this browser" : "Saved"; }
+
+function detectMode() {
+  return fetch("/api/vault", { method: "POST", cache: "no-store", headers: { "Content-Type": "application/json" }, body: "{}" })
+    .then(function (r) { LOCAL = (r.status === 404 || r.status === 405); }, function () { LOCAL = true; })
+    .then(function () {
+      if (!LOCAL) return;
+      $("#modeNote").textContent = "Your data is saved in THIS browser only, locked with your password. Download a backup (Backup tab) after you make the app key and after every token.";
+      if (!localLoad()) {
+        $("#pw").placeholder = "Make a new password";
+        $("#pw2").hidden = false;
+        $("#lockmsg").textContent = "First time on this browser: choose a password and type it twice. If you already have a backup file, restore it after unlocking.";
+      }
+    });
+}
+
 function api(action, extra) {
+  if (LOCAL) {
+    if (action === "load") return Promise.resolve({ status: 200, json: { rev: 0, vault: localLoad() } });
+    try { localStorage.setItem(LOCAL_KEY, JSON.stringify(extra.vault)); return Promise.resolve({ status: 200, json: { rev: 0 } }); }
+    catch (e) { return Promise.resolve({ status: 500, json: {} }); }
+  }
   return fetch("/api/vault", {
     method: "POST", cache: "no-store",
     headers: { "Content-Type": "application/json" },
@@ -54,7 +79,7 @@ function push() {
     return api("save", { baseRev: VAULT.rev, vault: vault });
   }).then(function (r) {
     VAULT.busy = false;
-    if (r.status === 200) { VAULT.rev = r.json.rev; setSync(VAULT.dirty ? "Saving..." : "Saved", VAULT.dirty ? "" : "ok"); if (VAULT.dirty) push(); return; }
+    if (r.status === 200) { VAULT.rev = r.json.rev; setSync(VAULT.dirty ? "Saving..." : savedText(), VAULT.dirty ? "" : "ok"); if (VAULT.dirty) push(); return; }
     if (r.status === 409) {
       VAULT.blocked = true; setSync("NOT SAVED: changed on another device", "bad");
       alert("These details were changed on another device or tab. Your last edit was NOT saved. Press Lock, unlock again, and redo it.");
@@ -81,7 +106,7 @@ function unlock(pw) {
       return deriveKey(pw, VAULT.salt).then(function (k) {
         VAULT.key = k;
         return openVault(r.json.vault).then(function (d) { data = d; data.devices = data.devices || []; data.ledger = data.ledger || []; data.sign = data.sign || null; }, function () {
-          throw new Error("The password was accepted, but your saved data is locked with a different password. Use the password that was set when you first opened this page.");
+          throw new Error(LOCAL ? "Wrong password." : "The password was accepted, but your saved data is locked with a different password. Use the password that was set when you first opened this page.");
         });
       });
     }
@@ -254,7 +279,7 @@ function renderBackup() {
   }});
   root.appendChild(el("div", {class: "card"}, [
     el("div", {class: "label", text: "Back up your app key"}),
-    el("div", {class: "muted", text: "Your data is stored online, locked with your password. Still download a backup after making the app key, and keep it somewhere private (a flash disk and your own email). The backup file is NOT locked and contains your private key, so never share it or upload it to GitHub."}),
+    el("div", {class: "muted", text: (LOCAL ? "Your data is saved in this browser only. If you clear the browser data or use another computer it is gone, so the backup file is your only safety net. " : "Your data is stored online, locked with your password. ") + "Download a backup after making the app key and after every token, and keep it somewhere private (a flash disk and your own email). The backup file is NOT locked and contains your private key, so never share it or upload it to GitHub."}),
     el("div", {class: "row", style: "margin-top:10px"}, [
       el("button", {class: "primary", text: "Download backup", onclick: function () {
         download("bn-admin-backup-" + new Date().toISOString().slice(0, 10) + ".json", JSON.stringify(data, null, 2));
@@ -276,7 +301,7 @@ document.querySelectorAll("nav button").forEach(function (b) {
 
 function startApp() {
   $("#lock").hidden = true; $("#app").hidden = false;
-  setSync(VAULT.dirty ? "Saving..." : "Saved", VAULT.dirty ? "" : "ok");
+  setSync(VAULT.dirty ? "Saving..." : savedText(), VAULT.dirty ? "" : "ok");
   renderAll(); bumpIdle();
   if (data.sign) { document.querySelector('nav button[data-tab="credits"]').click(); }
 }
@@ -288,10 +313,18 @@ function tryUnlock() {
   var pw = $("#pw").value, msg = $("#lockmsg"), btn = $("#go");
   if (!pw) { msg.textContent = "Type your password."; msg.className = "bad"; return; }
   btn.disabled = true; msg.className = "muted"; msg.textContent = "Unlocking...";
-  unlock(pw).then(function () { $("#pw").value = ""; startApp(); }, function (e) {
+  modeReady.then(function () {
+    if (LOCAL && !localLoad()) {
+      if (pw.length < 8) throw new Error("Use at least 8 characters.");
+      if (pw !== $("#pw2").value) throw new Error("The two passwords are not the same.");
+    }
+    return unlock(pw);
+  }).then(function () { $("#pw").value = ""; $("#pw2").value = ""; startApp(); }, function (e) {
     VAULT.pw = null; msg.textContent = e.message; msg.className = "bad";
   }).then(function () { btn.disabled = false; });
 }
 $("#go").addEventListener("click", tryUnlock);
 $("#pw").addEventListener("keydown", function (e) { if (e.key === "Enter") tryUnlock(); });
+$("#pw2").addEventListener("keydown", function (e) { if (e.key === "Enter") tryUnlock(); });
+var modeReady = detectMode();
 $("#pw").focus();

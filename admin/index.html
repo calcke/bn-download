@@ -14,10 +14,12 @@
     <h1 style="margin-bottom:4px">bn admin</h1>
     <div class="tag" style="margin-bottom:14px">PRIVATE &nbsp;&middot;&nbsp; PASSWORD REQUIRED</div>
     <input id="pw" type="password" placeholder="Admin password" autocomplete="current-password">
+    <input id="pw2" type="password" placeholder="Type the password again" autocomplete="new-password" style="margin-top:8px" hidden>
     <div class="row" style="margin-top:10px">
       <button class="primary grow" id="go">Unlock</button>
     </div>
     <div id="lockmsg" class="muted" style="margin-top:10px"></div>
+    <div id="modeNote" class="muted" style="margin-top:10px;font-size:.85rem"></div>
   </div>
 </div>
 
@@ -28,7 +30,7 @@
     <span class="sync" id="sync"></span>
     <button class="quiet" id="lockbtn">Lock</button>
   </header>
-  <div class="muted">Your app key and token history are locked with your password before they leave this page. Only the locked copy is stored online. The page locks itself after 15 minutes of no use.</div>
+  <div class="muted">Your app key and token history are locked with your password before they are saved. The page locks itself after 15 minutes of no use.</div>
 
   <nav>
     <button data-tab="key" class="on">1. App key</button>
