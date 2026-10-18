@@ -1,0 +1,39 @@
+name: Publish site to GitHub Pages
+
+# Copies the site/ folder into your PUBLIC download repo, which GitHub Pages serves for free.
+# Needs the two secrets RELEASE_REPO and RELEASE_TOKEN (see GETTING_THE_APK.md).
+on:
+  push:
+    branches: [main]
+    paths: ["site/**", ".github/workflows/publish-site.yml"]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_REPO: ${{ secrets.RELEASE_REPO }}
+      RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+    steps:
+      - name: Check the two secrets exist
+        run: |
+          if [ -z "$RELEASE_REPO" ] || [ -z "$RELEASE_TOKEN" ]; then
+            echo "Add the secrets RELEASE_REPO and RELEASE_TOKEN first. See GETTING_THE_APK.md."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - name: Copy the site into the public repo
+        run: |
+          git clone "https://x-access-token:${RELEASE_TOKEN}@github.com/${RELEASE_REPO}.git" public
+          rsync -a --delete --exclude '.git' --exclude 'README.md' --exclude 'downloads/' site/ public/
+          # the Download button points at the newest release of the public repo
+          sed -i "s#/downloads/bn.apk#https://github.com/${RELEASE_REPO}/releases/latest/download/bn.apk#g" public/index.html
+          touch public/.nojekyll
+          cd public
+          git config user.name "github-actions"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Update site from ${GITHUB_SHA::7}" || echo "No changes to publish"
+          git push
