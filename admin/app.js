@@ -1,3 +1,4 @@
+var LARGE_TOKEN = 500;   // credits at or above this ask for a second confirmation
 // =====================================================================
 // SAVED DATA: locked with your password in this page, stored online
 // =====================================================================
@@ -27,6 +28,22 @@ function openVault(v) {
   return crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(v.iv) }, VAULT.key, unb64(v.data)).then(function (buf) {
     return JSON.parse(new TextDecoder().decode(buf));
   });
+}
+
+
+// ---- locked backup files: the file is encrypted with a backup password, so a stolen file alone is useless ----
+function sealBackup(pw) {
+  var salt = randomBytes(16), iv = randomBytes(12);
+  return deriveKey(pw, salt).then(function (key) {
+    return crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, key, utf8(JSON.stringify(data)));
+  }).then(function (ct) {
+    return JSON.stringify({ bn_backup: 2, salt: b64(salt), iv: b64(iv), data: b64(new Uint8Array(ct)) }, null, 2);
+  });
+}
+function openBackup(pw, f) {
+  return deriveKey(pw, unb64(f.salt)).then(function (key) {
+    return crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(f.iv) }, key, unb64(f.data));
+  }).then(function (buf) { return JSON.parse(new TextDecoder().decode(buf)); });
 }
 
 // When the page is hosted on GitHub Pages there is no server function, so the locked data is kept in THIS browser.
@@ -223,7 +240,20 @@ function renderCredits() {
       el("button", {class: "primary", text: "Copy token", onclick: function () { copy(msg); }}),
       el("button", {text: "Share on WhatsApp", onclick: function () { window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank", "noopener"); }})
     ]));
-    out.appendChild(el("div", {class: "muted", style: "margin-top:8px", text: "Send this exactly as it is. The merchant copies it, opens bn, pastes it in the ADD CREDITS box and taps ADD CREDITS. It works once, on that phone only."}));
+    out.appendChild(el("div", {class: "muted", style: "margin-top:8px", text: "Send this exactly as it is. The merchant copies it, opens bn, taps Credits, pastes it and taps Add credits. It works once, on that phone only."}));
+  }
+
+  function makeIt(sign) {
+    var name = nameIn.value.trim(), serial = makeSerial(), n = sign * Math.abs(Math.floor(Number(tokIn.value))), id;
+    out.innerHTML = "";
+    try { id = normalizeDeviceId(idIn.value); } catch (e) { out.appendChild(el("div", {class: "bad", text: e.message})); return; }
+    if (!name) { out.appendChild(el("div", {class: "bad", text: "Type a name for this phone so you can find it later."})); return; }
+    makeVoucher(serial, n, id, data.sign.privJwk).then(function (code) {
+      var d = data.devices.filter(function (x) { return x.deviceId === id; })[0];
+      if (d) d.name = name; else data.devices.push({id: "d" + Date.now(), name: name, deviceId: id});
+      data.ledger.unshift({t: Date.now(), phone: name, deviceId: id, serial: serial, tokens: n});
+      save(); show(code, serial); renderLedger();
+    }, function (e) { out.appendChild(el("div", {class: "bad", text: "Cannot make token: " + e.message})); });
   }
 
   root.appendChild(el("div", {class: "card"}, [
@@ -233,16 +263,16 @@ function renderCredits() {
     el("div", {class: "row", style: "margin-top:8px"}, [nameIn, idIn]),
     chips,
     el("div", {class: "row"}, [tokIn, el("button", {class: "primary", text: "Make token", onclick: function () {
-      var name = nameIn.value.trim(), serial = makeSerial(), n = Math.floor(Number(tokIn.value)), id;
-      out.innerHTML = "";
-      try { id = normalizeDeviceId(idIn.value); } catch (e) { out.appendChild(el("div", {class: "bad", text: e.message})); return; }
-      if (!name) { out.appendChild(el("div", {class: "bad", text: "Type a name for this phone so you can find it later."})); return; }
-      makeVoucher(serial, n, id, data.sign.privJwk).then(function (code) {
-        var d = data.devices.filter(function (x) { return x.deviceId === id; })[0];
-        if (d) d.name = name; else data.devices.push({id: "d" + Date.now(), name: name, deviceId: id});
-        data.ledger.unshift({t: Date.now(), phone: name, deviceId: id, serial: serial, tokens: n});
-        save(); show(code, serial); renderLedger();
-      }, function (e) { out.appendChild(el("div", {class: "bad", text: "Cannot make token: " + e.message})); });
+      var amt = Math.abs(Math.floor(Number(tokIn.value)));
+      if (!amt) { out.innerHTML = ""; out.appendChild(el("div", {class: "bad", text: "Type how many credits first."})); return; }
+      // A big amount is the costly mistake (1000 instead of 100), so ask once more.
+      if (amt >= LARGE_TOKEN && !confirm("LARGE AMOUNT: you are about to give " + amt + " credits to " + (nameIn.value.trim() || "this phone") + ".\\n\\nIs " + amt + " really what they paid for?")) return;
+      makeIt(1);
+    }})]),
+    el("div", {class: "muted", style: "margin-top:12px", text: "Gave too many by mistake? Type how many to take back (for example 900) above and press the button below. The merchant pastes this token like any other, and the app removes those credits. If they already used them, their balance goes below zero and they must top up before they can sell again."}),
+    el("div", {class: "row", style: "margin-top:6px"}, [el("button", {class: "quiet", text: "Make a correction token (takes credits back)", onclick: function () {
+      if (!confirm("This makes a token that REMOVES " + Math.abs(Math.floor(Number(tokIn.value))) + " credits from that phone. Continue?")) return;
+      makeIt(-1);
     }})]),
     out
   ]));
@@ -254,7 +284,7 @@ function renderLedger() {
   box.innerHTML = ""; box.appendChild(el("div", {class: "label", text: "Tokens you have made"}));
   if (!data.ledger.length) { box.appendChild(el("div", {class: "muted", text: "None yet."})); return; }
   data.ledger.slice(0, 20).forEach(function (l) {
-    box.appendChild(el("div", {class: "muted", text: stamp(l.t) + "  ·  " + l.phone + "  ·  " + l.tokens + " credits  ·  " + l.serial}));
+    box.appendChild(el("div", {class: "muted", text: stamp(l.t) + "  ·  " + l.phone + "  ·  " + (l.tokens < 0 ? "REMOVES " + (-l.tokens) : l.tokens) + " credits  ·  " + l.serial}));
   });
 }
 
@@ -266,23 +296,42 @@ function renderBackup() {
   var restoreIn = el("input", {type: "file", accept: ".json", style: "display:none", onchange: function (ev) {
     var f = ev.target.files[0]; if (!f) return;
     var r = new FileReader();
+    function apply(d) {
+      if (typeof d !== "object" || !d || !(d.sign || d.ledger || d.phones)) throw 0;
+      if (!confirm("Replace everything in this page with the backup?")) return;
+      d.devices = d.devices || []; d.ledger = d.ledger || []; d.sign = d.sign || null;
+      data = d; save(); renderAll(); toast("Backup restored");
+    }
     r.onload = function () {
-      try {
-        var d = JSON.parse(r.result);
-        if (typeof d !== "object" || !d || !(d.sign || d.ledger || d.phones)) throw 0;
-        if (!confirm("Replace everything in this page with the backup?")) return;
-        d.devices = d.devices || []; d.ledger = d.ledger || []; d.sign = d.sign || null;
-        data = d; save(); renderAll(); toast("Backup restored");
-      } catch (e) { alert("That is not a bn admin backup file."); }
+      var f;
+      try { f = JSON.parse(r.result); } catch (e) { alert("That is not a bn admin backup file."); return; }
+      if (f && f.bn_backup === 2) {
+        var pw = prompt("Type the backup password for this file.");
+        if (pw === null) return;
+        openBackup(pw, f).then(function (d) {
+          try { apply(d); } catch (e) { alert("That is not a bn admin backup file."); }
+        }, function () { alert("Wrong backup password, or the file was changed."); });
+        return;
+      }
+      // An old unlocked backup still restores, but tell the owner to replace it.
+      try { apply(f); alert("This was an OLD unlocked backup. Press Download locked backup now, then delete the old file."); }
+      catch (e) { alert("That is not a bn admin backup file."); }
     };
     r.readAsText(f);
   }});
   root.appendChild(el("div", {class: "card"}, [
     el("div", {class: "label", text: "Back up your app key"}),
-    el("div", {class: "muted", text: (LOCAL ? "Your data is saved in this browser only. If you clear the browser data or use another computer it is gone, so the backup file is your only safety net. " : "Your data is stored online, locked with your password. ") + "Download a backup after making the app key and after every token, and keep it somewhere private (a flash disk and your own email). The backup file is NOT locked and contains your private key, so never share it or upload it to GitHub."}),
+    el("div", {class: "muted", text: (LOCAL ? "Your data is saved in this browser only. If you clear the browser data or use another computer it is gone, so the backup file is your only safety net. " : "Your data is stored online, locked with your password. ") + "Download a backup after making the app key and after every token, and keep it somewhere private (a flash disk and your own email). The backup file is locked with a backup password you choose (use a different one from your page password). Keep the file and the password in different places, and never upload either to GitHub."}),
     el("div", {class: "row", style: "margin-top:10px"}, [
-      el("button", {class: "primary", text: "Download backup", onclick: function () {
-        download("bn-admin-backup-" + new Date().toISOString().slice(0, 10) + ".json", JSON.stringify(data, null, 2));
+      el("button", {class: "primary", text: "Download locked backup", onclick: function () {
+        var p1 = prompt("Choose a BACKUP password (at least 8 characters). You need it to restore this file. If you forget it, the file cannot be opened by anyone.");
+        if (p1 === null) return;
+        if (p1.length < 8) { alert("Too short. Use at least 8 characters."); return; }
+        var p2 = prompt("Type the backup password again.");
+        if (p2 !== p1) { alert("The two passwords are not the same. No file was made."); return; }
+        sealBackup(p1).then(function (txt) {
+          download("bn-admin-backup-" + new Date().toISOString().slice(0, 10) + ".json", txt);
+        }, function (e) { alert("Could not make the backup: " + e.message); });
       }}),
       el("button", {class: "quiet", text: "Restore from backup", onclick: function () { restoreIn.click(); }})
     ]), restoreIn

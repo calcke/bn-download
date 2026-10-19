@@ -35,7 +35,8 @@ function generateSigningKey() {
 // Token = BN$V$<serial>$<credits>$<deviceId>$<signature>. No * characters, so WhatsApp leaves it alone.
 function makeVoucher(serial, credits, deviceId, privJwk) {
   credits = Math.floor(Number(credits));
-  if (!(credits > 0)) return Promise.reject(new Error("credits must be more than 0"));
+  // A negative number makes a correction token that takes credits back.
+  if (!credits) return Promise.reject(new Error("credits must be a whole number that is not 0"));
   if (!privJwk) return Promise.reject(new Error("make the app key first (tab 1)"));
   var id;
   try { id = normalizeDeviceId(deviceId); } catch (e) { return Promise.reject(e); }
